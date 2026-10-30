@@ -121,24 +121,26 @@ assert "No consent record" in app.voice_details(profile)[1], "claimed consent th
 consent.LOG = real_log
 print(f"   {details}")
 
-print("8) Live chat: missing API key is reported before any saving; no voice gives guidance")
-os.environ.pop("ANTHROPIC_API_KEY", None)
+print("8) Live chat: missing API key is reported before any saving, per provider; no voice gives guidance")
+for k in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+    os.environ.pop(k, None)
 assert "API key" in app.voice_chat.status_html()
 app.VOICES = tmp / "voices2"
 app.VOICES.mkdir()
-try:
-    app.chat_start("", "", "English", "Tester", [str(ref_path)], None, SPEAKER, True)
-    raise AssertionError("started without an API key")
-except gr.Error as e:
-    assert "ANTHROPIC_API_KEY" in e.message, e
+for provider, var in [("Claude", "ANTHROPIC_API_KEY"), ("Gemini", "GEMINI_API_KEY")]:
+    try:
+        app.chat_start("", "", "English", "Tester", provider, [str(ref_path)], None, SPEAKER, True)
+        raise AssertionError(f"{provider} started without an API key")
+    except gr.Error as e:
+        assert var in e.message, e
 assert app.saved_names() == [], "saved a profile before checking the API key"
-os.environ["ANTHROPIC_API_KEY"] = "test-key-not-used"
+os.environ["GEMINI_API_KEY"] = "test-key-not-used"
 try:
-    app.chat_start("", "", "English", "Tester", None, None, "", False)
+    app.chat_start("", "", "English", "Tester", "Gemini", None, None, "", False)
     raise AssertionError("started with no voice")
 except gr.Error as e:
     assert "saved voice" in e.message, e
-os.environ.pop("ANTHROPIC_API_KEY")
+os.environ.pop("GEMINI_API_KEY")
 print("   ok")
 
 print("9) un-watermarked audio is not flagged")

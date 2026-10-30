@@ -68,15 +68,19 @@ curl -L -C - -O https://huggingface.co/Systran/faster-whisper-small/resolve/main
 A hands-free voice call with a saved voice: speak, pause, and the reply comes back in that voice.
 
 ```
-mic → speech detection → Whisper (local) → Claude Opus 5.5 (streamed) → XTTS-v2 (streamed, cloned voice) → speakers
+mic → speech detection → Whisper (local) → Claude or Gemini (streamed) → XTTS-v2 (cloned voice) → speakers
 ```
 
 1. Pick a saved voice, or open **Use a new voice** in the Live Chat tab and add a clip with the consent box
    ticked (it is saved as a voice profile). Voices cloned in Clone & Speak are saved automatically unless you
    untick "Save these clips as a voice profile".
-2. Get an API key at <https://console.anthropic.com>, then set it before starting the app:
+2. Set an API key for the AI that writes the replies, then start the app. Either one works; with both set you
+   can switch in the "Replies written by" option.
    ```bat
+   rem Claude (Claude Opus 5.5) - key from https://console.anthropic.com
    set ANTHROPIC_API_KEY=sk-ant-...
+   rem or Gemini (gemini-3.8-flash; override with GEMINI_MODEL) - key from https://aistudio.google.com
+   set GEMINI_API_KEY=...
    run.bat
    ```
 3. Open **Live Voice Chat**, pick the voice, and describe their personality, way of talking and shared memories.
@@ -91,8 +95,10 @@ Things to know:
   runs ~15x slower than real time: a short sentence takes ~35 s, so each reply arrives after half a minute or
   more. On CPU it plays whole sentences, so the wait is long but playback is smooth. On an NVIDIA GPU (RTX 3060 or
   better) XTTS generates faster than real time and reply audio streams while it's being generated.
-- **Privacy:** speech-to-text and voice generation run locally. Only the text of the conversation goes to
-  Anthropic's API. Claude Opus 5.5 runs at low effort for snappy replies, with server-side refusal fallback on.
+- **Privacy:** speech-to-text and voice generation run locally; only the text of the conversation goes to the
+  AI provider you pick. Claude Opus 5.5 runs at low effort for snappy replies, with server-side refusal fallback
+  on. Gemini runs with low thinking. On Gemini's **free tier, Google may use your conversation text to improve
+  its products**; use a paid Gemini key or Claude for conversations you want kept private.
 - **Urdu/Hindi:** speak normally; replies are written in Devanagari so the Hindi voice can read them.
 - Turn-taking is one at a time: it doesn't listen while it's talking, so wait for it to finish.
 
@@ -179,6 +185,7 @@ tests/smoke_test.py    end-to-end check
 | Gradio | Apache-2.0 | yes |
 | faster-whisper + Whisper small | MIT | yes |
 | Claude API (Live Voice Chat) | [Anthropic commercial terms](https://www.anthropic.com/legal/commercial-terms) | yes, pay-per-use |
+| Gemini API (Live Voice Chat, optional) | [Gemini API terms](https://ai.google.dev/gemini-api/terms); `google-genai` SDK Apache-2.0 | yes; free tier available |
 
 `COQUI_TOS_AGREED=1` in `run.bat` / `run.sh` means **you** accept the CPML. Because the OpenVoice engine uses an
 XTTS voice as its base speaker, a fully commercial setup would need a different base TTS (e.g. MeloTTS, MIT).

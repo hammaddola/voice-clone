@@ -1,6 +1,6 @@
-"""Hands-free voice chat: mic -> speech detection -> Whisper -> Claude (streamed) -> XTTS (streamed) -> speakers.
+"""Hands-free voice chat: mic -> speech detection -> Whisper -> Claude or Gemini (streamed) -> XTTS -> speakers.
 
-Replies are written by Claude and spoken in a saved, consented voice. Every played chunk is watermarked.
+Replies are written by the chosen AI and spoken in a saved, consented voice. Every played chunk is watermarked.
 """
 import html
 import os
@@ -17,6 +17,7 @@ from audio import watermark
 from engines.xtts_engine import DEVICE, XTTSEngine
 
 MODEL = "claude-opus-5-5"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 MIC_SR, OUT_SR = 16000, 24000
 FRAME = 0.03                       # mic block, seconds
 END_SILENCE, MAX_UTTERANCE = 0.8, 30.0
@@ -28,6 +29,18 @@ _SENTENCE = re.compile(r"(.+?[.!?।۔。！？])(\s+|$)", re.S)
 
 class ChatError(Exception):
     pass
+
+
+def split_stream(deltas):
+    """Turn a stream of text deltas into whole sentences as soon as each one ends."""
+    buf = ""
+    for text in deltas:
+        buf += text
+        while m := _SENTENCE.match(buf):
+            yield m.group(1).strip()
+            buf = buf[m.end():]
+    if buf.strip():
+        yield buf.strip()
 
 
 def system_prompt(speaker, user_name, persona, lang):
@@ -53,12 +66,54 @@ real events on {speaker}'s behalf, and if {user} sincerely asks whether this is 
 are the AI version."""
 
 
+# --- reply writers: each streams text deltas and records the turn in its own history format ---
+
+def stream_claude(client, system, history, user_text):
+    history.append({"role": "user", "content": user_text})
+    with client.beta.messages.stream(
+        model=MODEL, max_tokens=1024, system=system, messages=history,
+        output_config={"effort": "low"},  # conversational turns: low effort keeps replies fast
+        betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+    ) as stream:
+        yield from stream.text_stream
+        final = stream.get_final_message()
+    history.append({"role": "assistant", "content": final.content})  # full content, thinking blocks included
+
+
+def stream_gemini(client, system, history, user_text):
+    from google.genai import types
+
+    history.append({"role": "user", "parts": [{"text": user_text}]})
+    reply = ""
+    for chunk in client.models.generate_content_stream(
+        model=GEMINI_MODEL, contents=history,
+        config=types.GenerateContentConfig(system_instruction=system,
+                                           thinking_config=types.ThinkingConfig(thinking_level="LOW")),
+    ):
+        text = chunk.text or ""
+        reply += text
+        yield text
+    history.append({"role": "model", "parts": [{"text": reply}]})
+
+
+PROVIDERS = {  # UI label -> (env vars holding the key, model, client factory, reply writer)
+    "Claude": (("ANTHROPIC_API_KEY",), MODEL,
+               lambda: __import__("anthropic").Anthropic(), stream_claude),
+    "Gemini": (("GEMINI_API_KEY", "GOOGLE_API_KEY"), GEMINI_MODEL,
+               lambda: __import__("google.genai", fromlist=["Client"]).Client(), stream_gemini),
+}
+
+
+def configured_providers():
+    return [p for p, (keys, *_) in PROVIDERS.items() if any(os.environ.get(k) for k in keys)]
+
+
 class Chat:
-    def __init__(self, voice, speaker, persona, lang, user_name):
-        import anthropic
+    def __init__(self, voice, speaker, persona, lang, user_name, provider="Claude"):
         from faster_whisper import WhisperModel
 
-        self.client = anthropic.Anthropic()
+        _, _, make_client, self.writer = PROVIDERS[provider]
+        self.client = make_client()
         self.whisper = WhisperModel(WHISPER, device="cuda" if DEVICE == "cuda" else "cpu",
                                     compute_type="float16" if DEVICE == "cuda" else "int8")
         self.xtts = XTTSEngine()
@@ -117,37 +172,20 @@ class Chat:
                     out.write(np.concatenate(chunks)[:, None])
 
     def _reply(self, user_text, sd):
-        self.history.append({"role": "user", "content": user_text})
         sentences = queue.Queue()
         talker = threading.Thread(target=self._speaker_loop, args=(sentences, sd), daemon=True)
         talker.start()
-        said, buf = "", ""
         self.transcript.append([self.speaker, ""])
         self.status = "Thinking"
-        with self.client.beta.messages.stream(
-            model=MODEL, max_tokens=1024, system=self.system, messages=self.history,
-            output_config={"effort": "low"},  # conversational turns: low effort keeps replies fast
-            betas=["server-side-fallback-2026-07-01"], fallbacks="default",
-        ) as stream:
-            for text in stream.text_stream:
-                buf += text
-                while m := _SENTENCE.match(buf):
-                    sentences.put(m.group(1).strip())
-                    said += m.group(0)
-                    buf = buf[m.end():]
-                    self.transcript[-1][1] = said.strip()
-                if not self.running:
-                    sentences.put(None)
-                    return
-            final = stream.get_final_message()
-        if buf.strip():
-            sentences.put(buf.strip())
-            said += buf
+        said = ""
+        for sentence in split_stream(self.writer(self.client, self.system, self.history, user_text)):
+            sentences.put(sentence)
+            said += sentence + " "
+            self.transcript[-1][1] = said.strip()
+            if not self.running:
+                break
         sentences.put(None)
-        if final.stop_reason == "refusal":
-            said = said or "(no reply)"
-        self.transcript[-1][1] = said.strip()
-        self.history.append({"role": "assistant", "content": final.content})  # full content, thinking blocks included
+        self.transcript[-1][1] = said.strip() or "(no reply)"
         talker.join()
 
     def _run(self):
@@ -180,20 +218,31 @@ class Chat:
 _chat: Chat | None = None
 
 
-def api_key_problem():
-    """The one place that decides whether live chat can reach Claude; None when it can."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        return ("Live chat needs an Anthropic API key (ANTHROPIC_API_KEY). Get one at console.anthropic.com, "
-                "run: set ANTHROPIC_API_KEY=sk-ant-... and restart the app.")
+_KEY_HELP = {
+    "Claude": "an Anthropic API key from console.anthropic.com: set ANTHROPIC_API_KEY=sk-ant-...",
+    "Gemini": "a Gemini API key from aistudio.google.com: set GEMINI_API_KEY=...",
+}
+
+
+def api_key_problem(provider=None):
+    """The one place that decides whether live chat can reach an AI; None when it can.
+    provider=None asks whether any provider is usable."""
+    if provider is None:
+        if configured_providers():
+            return None
+        return ("Live chat needs an API key for the AI that writes the replies. Either get "
+                f"{_KEY_HELP['Claude']}, or get {_KEY_HELP['Gemini']}. Then restart the app.")
+    if provider not in configured_providers():
+        return f"{provider} needs {_KEY_HELP[provider]}, then restart the app."
     return None
 
 
-def start(voice, speaker, persona, lang, user_name):
+def start(voice, speaker, persona, lang, user_name, provider="Claude"):
     global _chat
-    if problem := api_key_problem():
+    if problem := api_key_problem(provider):
         raise ChatError(problem)
     stop()
-    _chat = Chat(voice, speaker, persona, lang, user_name)
+    _chat = Chat(voice, speaker, persona, lang, user_name, provider)
 
 
 def stop():
@@ -235,4 +284,43 @@ if __name__ == "__main__":
     assert [x.group(1) for x in m] == ["Hi love.", "How was your day?", "I missed you!"]
     p = system_prompt("Sara", "Hammad", "", "ur")
     assert "Devanagari" in p and "AI version" in p
+    assert list(split_stream(["Hi lo", "ve. How ", "are you? Fine"])) == ["Hi love.", "How are you?", "Fine"]
+
+    from types import SimpleNamespace as NS
+    from contextlib import contextmanager
+
+    # Gemini writer against a fake client: request shape, streamed text, history format
+    seen = {}
+
+    def fake_gemini_stream(model, contents, config):
+        seen.update(model=model, n=len(contents), system=config.system_instruction,
+                    level=config.thinking_config.thinking_level)
+        return iter([NS(text="Hi there. "), NS(text=None), NS(text="Missed you!")])
+
+    hist = []
+    out = list(stream_gemini(NS(models=NS(generate_content_stream=fake_gemini_stream)), "SYS", hist, "hello"))
+    assert "".join(out) == "Hi there. Missed you!" and seen["model"] == GEMINI_MODEL and seen["system"] == "SYS"
+    assert str(seen["level"]).upper().endswith("LOW"), seen
+    assert hist == [{"role": "user", "parts": [{"text": "hello"}]},
+                    {"role": "model", "parts": [{"text": "Hi there. Missed you!"}]}]
+
+    # Claude writer against a fake client
+    @contextmanager
+    def fake_claude_stream(**kw):
+        seen.update(kw)
+        yield NS(text_stream=iter(["Hello ", "love."]), get_final_message=lambda: NS(content=["BLOCKS"]))
+
+    hist = []
+    out = list(stream_claude(NS(beta=NS(messages=NS(stream=fake_claude_stream))), "SYS", hist, "hi"))
+    assert "".join(out) == "Hello love." and seen["model"] == MODEL and seen["fallbacks"] == "default"
+    assert hist == [{"role": "user", "content": "hi"}, {"role": "assistant", "content": ["BLOCKS"]}]
+
+    # key detection: Gemini accepts GEMINI_API_KEY or GOOGLE_API_KEY; messages name the right variable
+    for k in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        os.environ.pop(k, None)
+    assert configured_providers() == [] and "ANTHROPIC_API_KEY" in api_key_problem() and "GEMINI_API_KEY" in api_key_problem()
+    os.environ["GOOGLE_API_KEY"] = "x"
+    assert configured_providers() == ["Gemini"] and api_key_problem() is None and api_key_problem("Gemini") is None
+    assert "ANTHROPIC_API_KEY" in api_key_problem("Claude")
+    os.environ.pop("GOOGLE_API_KEY")
     print("voice_chat self-check ok")

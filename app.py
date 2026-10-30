@@ -253,8 +253,8 @@ def reference_inputs(name_label="Speaker name"):
 
 # ---------- Live voice chat ----------
 
-def chat_start(saved, persona, lang_label, user_name, files, mic, speaker, agreed):
-    if problem := voice_chat.api_key_problem():  # before any slow saving/encoding
+def chat_start(saved, persona, lang_label, user_name, provider, files, mic, speaker, agreed):
+    if problem := voice_chat.api_key_problem(provider):  # before any slow saving/encoding
         raise gr.Error(problem)
     if not saved:
         if not files and not mic:
@@ -263,7 +263,8 @@ def chat_start(saved, persona, lang_label, user_name, files, mic, speaker, agree
     voice, _ = load_profile(saved, ENGINES["XTTS-v2"])
     (VOICES / saved / "persona.txt").write_text(persona or "", encoding="utf-8")
     try:
-        voice_chat.start(voice, speaker=saved, persona=persona, lang=LANGUAGES[lang_label], user_name=user_name)
+        voice_chat.start(voice, speaker=saved, persona=persona, lang=LANGUAGES[lang_label], user_name=user_name,
+                         provider=provider)
     except voice_chat.ChatError as e:
         raise gr.Error(str(e))
     return (*chat_poll(), gr.update(choices=[""] + saved_names(), value=saved, info=None))
@@ -354,12 +355,17 @@ with gr.Blocks(title="Voice Clone") as demo:
                 with gr.Row():
                     user_name = gr.Textbox(label="Your name", placeholder="e.g. Hammad")
                     lang3 = gr.Dropdown(list(LANGUAGES), value="English", label="Conversation language")
+                ready = voice_chat.configured_providers()
+                provider3 = gr.Radio(list(voice_chat.PROVIDERS), value=(ready or ["Claude"])[0],
+                                     label="Replies written by",
+                                     info="Uses whichever API key you set: ANTHROPIC_API_KEY for Claude, "
+                                          "GEMINI_API_KEY for Gemini")
                 with gr.Row():
                     start3 = gr.Button("Start talking", variant="primary", size="lg")
                     stop3 = gr.Button("Stop", variant="secondary", size="lg")
-                gr.HTML('<p class="vc-hint">Hands-free: just speak, then pause. Replies are written by Claude and spoken '
-                        'in the cloned voice, so it sounds like her but it is an AI, not her. Wear headphones so it doesn\'t '
-                        'hear itself. Needs <code>ANTHROPIC_API_KEY</code>.</p>')
+                gr.HTML('<p class="vc-hint">Hands-free: just speak, then pause. Replies are written by the AI you pick '
+                        'and spoken in the cloned voice, so it sounds like them but it is an AI, not them. '
+                        'Wear headphones so it doesn\'t hear itself.</p>')
             with gr.Column(scale=7, elem_classes="vc-card"):
                 gr.HTML(ui.step(2, "Conversation"))
                 chat_status = gr.HTML(voice_chat.status_html())
@@ -391,7 +397,8 @@ with gr.Blocks(title="Voice Clone") as demo:
     save_btn.click(save_voice, [v_name, v_files, v_mic, v_agreed], [v_msg]).then(refresh_pickers, pickers, pickers)
     del_btn.click(delete_voice, [existing], [v_msg]).then(refresh_pickers, pickers, pickers)
     gen_event.then(refresh_pickers, pickers, pickers)
-    start3.click(chat_start, [saved3, persona, lang3, user_name, *ref3], [chat_status, chat_log, saved3]).then(
+    start3.click(chat_start, [saved3, persona, lang3, user_name, provider3, *ref3],
+                 [chat_status, chat_log, saved3]).then(
         refresh_pickers, pickers, pickers)
 
     with gr.Tab("Watermark Check"):
