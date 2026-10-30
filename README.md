@@ -71,7 +71,9 @@ A hands-free voice call with a saved voice: speak, pause, and the reply comes ba
 mic → speech detection → Whisper (local) → Claude Opus 5.5 (streamed) → XTTS-v2 (streamed, cloned voice) → speakers
 ```
 
-1. Save the voice in **Saved Voices** first (that's where consent is recorded).
+1. Pick a saved voice, or open **Use a new voice** in the Live Chat tab and add a clip with the consent box
+   ticked (it is saved as a voice profile). Voices cloned in Clone & Speak are saved automatically unless you
+   untick "Save these clips as a voice profile".
 2. Get an API key at <https://console.anthropic.com>, then set it before starting the app:
    ```bat
    set ANTHROPIC_API_KEY=sk-ant-...

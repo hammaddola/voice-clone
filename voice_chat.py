@@ -180,10 +180,18 @@ class Chat:
 _chat: Chat | None = None
 
 
+def api_key_problem():
+    """The one place that decides whether live chat can reach Claude; None when it can."""
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return ("Live chat needs an Anthropic API key (ANTHROPIC_API_KEY). Get one at console.anthropic.com, "
+                "run: set ANTHROPIC_API_KEY=sk-ant-... and restart the app.")
+    return None
+
+
 def start(voice, speaker, persona, lang, user_name):
     global _chat
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise ChatError("Set ANTHROPIC_API_KEY (from console.anthropic.com) before starting, then restart the app.")
+    if problem := api_key_problem():
+        raise ChatError(problem)
     stop()
     _chat = Chat(voice, speaker, persona, lang, user_name)
 
@@ -199,7 +207,9 @@ _TONE = {"Your turn": ui.OK, "Listening": "#22D3EE", "Speaking": "#A78BFA", "Err
 
 def status_html():
     if _chat is None:
-        return '<p class="vc-empty">Pick a saved voice and press <b>Start talking</b>.</p>'
+        if problem := api_key_problem():
+            return ui.notes([problem])
+        return '<p class="vc-empty">Pick a voice and press <b>Start talking</b>.</p>'
     tone = _TONE.get(_chat.status, ui.WARN)
     detail = f'<span class="vc-hint">{html.escape(_chat.detail)}</span>' if _chat.detail else ""
     return (f'<div class="vc-pill" role="status" aria-live="polite" style="color:{tone};border-color:{tone}55">'

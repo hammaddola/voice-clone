@@ -61,7 +61,8 @@ class XTTSEngine(Engine):
     def tts(self, text, lang, voice, speed=1.0, temperature=0.7, repetition_penalty=10.0, **kw):
         out = self.model.inference(
             text, self.lang_map.get(lang, lang), voice["gpt"].to(DEVICE), voice["spk"].to(DEVICE),
-            temperature=temperature, repetition_penalty=repetition_penalty, speed=speed,
+            # UI sliders can send ints (10 not 10.0); transformers 5 rejects non-float penalties
+            temperature=float(temperature), repetition_penalty=float(repetition_penalty), speed=float(speed),
             enable_text_splitting=False,
         )
         wav = out["wav"]

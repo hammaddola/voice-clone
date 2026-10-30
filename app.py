@@ -101,13 +101,16 @@ def finish(wav, ref_wav, fmt, warns, engine_label):
     out = OUTPUTS / f"{time.strftime('%Y%m%d-%H%M%S')}.{fmt.lower()}"
     sf.write(out, wav, SR, format=fmt.upper())
     score = similarity.score(ref_wav, wav, SR)
+    if len(wav) / SR < 2.5:
+        warns = [*warns, "Under ~2.5 s of speech the similarity score is unreliable and reads low; "
+                         "try a longer line to judge the likeness."]
     return str(out), ui.result_card(score, engine_label, warns)
 
 
 # ---------- tab callbacks ----------
 
 def clone_and_speak(files, mic, speaker, agreed, saved, text, lang_label, engine_name, speed, temperature,
-                    rep_pen, fmt, progress=gr.Progress()):
+                    rep_pen, fmt, remember=False, progress=gr.Progress()):
     if not text or not text.strip():
         raise gr.Error("Type some text to speak.")
     engine, lang = ENGINES[engine_name], LANGUAGES[lang_label]
@@ -121,7 +124,19 @@ def clone_and_speak(files, mic, speaker, agreed, saved, text, lang_label, engine
     voice, ref_wav, w = resolve_voice(saved, files, mic, speaker, agreed, engine, OUTPUTS / "_refs")
     wav = synthesize(engine, text, lang, voice, speed=speed, progress=progress,
                      temperature=temperature, repetition_penalty=rep_pen)
-    return finish(wav, ref_wav, fmt, warns + w, engine.name)
+    picked = gr.update()  # leave the saved-voice picker alone unless a new profile is created
+    if remember and not saved:  # consent was checked by resolve_voice above
+        if speaker and speaker.strip():
+            try:
+                name, _ = save_profile(speaker, clip_paths(files, mic), agreed)
+                torch.save(voice, VOICES / name / f"{slug(engine.name)}.pt")  # reuse the encoding we just did
+                warns.append(f'Saved as voice profile "{name}". It is now selected and available in every tab.')
+                picked = gr.update(choices=[""] + saved_names(), value=name, info=None)
+            except ProfileExists as e:
+                warns.append(e.message)
+        else:
+            warns.append("Not saved as a voice profile: enter the speaker's name to save it.")
+    return (*finish(wav, ref_wav, fmt, warns + w, engine.name), picked)
 
 
 def speech_to_speech(source, files, mic, speaker, agreed, saved, fmt):
@@ -132,37 +147,92 @@ def speech_to_speech(source, files, mic, speaker, agreed, saved, fmt):
     return finish(wav, ref_wav, fmt, warns, "OpenVoice v2")
 
 
-def save_voice(name, files, mic, agreed):
+class ProfileExists(gr.Error):
+    pass
+
+
+def save_profile(name, paths, agreed, replace=False):
+    """Consent-gate, clean and store clips as voices/<name>/. Returns (profile name, warnings).
+
+    Same clips as the existing profile: no-op. Different clips: refused unless replace=True, which keeps persona.txt."""
     if not name or not name.strip():
-        raise gr.Error("Give the voice a name (the speaker's name).")
-    paths = clip_paths(files, mic)
+        raise gr.Error("Enter the speaker's name. It's also the name of the saved voice.")
     try:
         hashes = consent.require(paths, name, agreed)
     except consent.ConsentError as e:
         raise gr.Error(str(e))
     d = VOICES / slug(name)
+    persona = None
+    if (d / "meta.json").exists():
+        if json.loads((d / "meta.json").read_text(encoding="utf-8"))["sha256"] == hashes:
+            return d.name, []
+        if not replace:
+            raise ProfileExists(f'A saved voice named "{d.name}" already exists with different clips, so it was left '
+                                'unchanged. Use another name, or replace it in the Saved Voices tab.')
+        p = d / "persona.txt"
+        persona = p.read_text(encoding="utf-8") if p.exists() else None
     if d.exists():
         shutil.rmtree(d)
     _, _, warns = clean_refs(paths, d)
     (d / "meta.json").write_text(json.dumps({"name": name.strip(), "sha256": hashes,
                                             "created": time.strftime("%Y-%m-%d %H:%M:%S")}), encoding="utf-8")
+    if persona is not None:
+        (d / "persona.txt").write_text(persona, encoding="utf-8")
+    return d.name, warns
+
+
+def save_voice(name, files, mic, agreed):
+    saved, warns = save_profile(name, clip_paths(files, mic), agreed, replace=True)
     for engine in ENGINES.values():  # cache latents/embeddings now so generation starts instantly later
-        load_profile(d.name, engine)
-    msg = f'<p class="vc-hint" role="status">Saved <b>{d.name}</b>. It now appears under "Saved voice" in the other tabs.</p>'
-    return msg + ui.notes(warns), *refresh_choices()
+        load_profile(saved, engine)
+    msg = f'<p class="vc-hint" role="status">Saved <b>{saved}</b>. It now appears under "Saved voice" in the other tabs.</p>'
+    return msg + ui.notes(warns)
 
 
 def delete_voice(name):
     if not name:
         raise gr.Error("Pick a saved voice to delete.")
     shutil.rmtree(VOICES / name, ignore_errors=True)
-    return f'<p class="vc-hint" role="status">Deleted <b>{name}</b>.</p>', *refresh_choices()
+    return f'<p class="vc-hint" role="status">Deleted <b>{name}</b>.</p>'
 
 
-def refresh_choices():
+NO_VOICES = "No saved voices yet. Upload clips here, or save one in the Saved Voices tab."
+NO_LIBRARY = "No saved voices yet. Add one on the left."
+
+
+def voice_info():
+    return None if saved_names() else NO_VOICES
+
+
+def refresh_pickers(v1, v2, v3, v4):
+    """New choices for every saved-voice picker, keeping each tab's own selection unless that voice is gone
+    (re-sending an unchanged value would fire .change and reload Live Chat's persona over unsaved edits)."""
     names = saved_names()
-    return (gr.update(choices=[""] + names, value=""), gr.update(choices=[""] + names, value=""),
-            gr.update(choices=names, value=None))
+    info = None if names else NO_VOICES
+
+    def pick(v, empty=""):
+        return gr.update(choices=[""] + names, info=info) if not v or v in names else \
+            gr.update(choices=[""] + names, value=empty, info=info)
+
+    lib = gr.update(choices=names, info=None if names else NO_LIBRARY)
+    if v4 and v4 not in names:
+        lib = gr.update(choices=names, value=None, info=None if names else NO_LIBRARY)
+    return pick(v1), pick(v2), pick(v3), lib
+
+
+def voice_details(name):
+    if not name:
+        return None, ""
+    d = VOICES / name
+    meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
+    refs = sorted(d.glob("ref_*.wav"))
+    secs = sum(sf.info(r).duration for r in refs)
+    cached = [p.stem for p in d.glob("*.pt")]
+    consented = set(meta["sha256"]) <= consent.logged_hashes()
+    return str(refs[0]) if refs else None, (
+        f'<p class="vc-hint">{len(refs)} clip{"s" * (len(refs) != 1)} · {secs:.1f} s of speech · saved {meta["created"]}'
+        f'<br>{"Consent on record" if consented else "<b>No consent record found</b>: re-save this voice"}'
+        f' · cached for: {", ".join(cached) or "computed on first use"}</p>')
 
 
 def check_watermark(path):
@@ -183,16 +253,20 @@ def reference_inputs(name_label="Speaker name"):
 
 # ---------- Live voice chat ----------
 
-def chat_start(saved, persona, lang_label, user_name):
+def chat_start(saved, persona, lang_label, user_name, files, mic, speaker, agreed):
+    if problem := voice_chat.api_key_problem():  # before any slow saving/encoding
+        raise gr.Error(problem)
     if not saved:
-        raise gr.Error("Pick a saved voice. Live chat uses Saved Voices, so consent is already on record.")
+        if not files and not mic:
+            raise gr.Error("Choose a saved voice, or open \"Use a new voice\" and add a clip of the speaker.")
+        saved, _ = save_profile(speaker, clip_paths(files, mic), agreed)
     voice, _ = load_profile(saved, ENGINES["XTTS-v2"])
     (VOICES / saved / "persona.txt").write_text(persona or "", encoding="utf-8")
     try:
         voice_chat.start(voice, speaker=saved, persona=persona, lang=LANGUAGES[lang_label], user_name=user_name)
     except voice_chat.ChatError as e:
         raise gr.Error(str(e))
-    return chat_poll()
+    return (*chat_poll(), gr.update(choices=[""] + saved_names(), value=saved, info=None))
 
 
 def chat_stop():
@@ -216,8 +290,11 @@ with gr.Blocks(title="Voice Clone") as demo:
         with gr.Row(equal_height=False):
             with gr.Column(scale=5, elem_classes="vc-card"):
                 gr.HTML(ui.step(1, "Voice"))
-                saved1 = gr.Dropdown([""] + saved_names(), value="", label="Saved voice (skips upload and consent)")
+                saved1 = gr.Dropdown([""] + saved_names(), value="", label="Saved voice (skips upload and consent)",
+                                     info=voice_info())
                 ref1 = reference_inputs()
+                remember1 = gr.Checkbox(True, label="Save these clips as a voice profile",
+                                        info="So you can pick this voice in Live Voice Chat and Speech-to-Speech")
             with gr.Column(scale=7):
                 with gr.Column(elem_classes="vc-card"):
                     gr.HTML(ui.step(2, "Script"))
@@ -236,11 +313,15 @@ with gr.Blocks(title="Voice Clone") as demo:
                         rep_pen = gr.Slider(1.0, 20.0, 10.0, step=0.5, label="Repetition penalty",
                                             info="Raise it if words repeat or babble")
                     go = gr.Button("Generate speech", variant="primary", size="lg")
+                    if DEVICE == "cpu":
+                        gr.HTML('<p class="vc-hint">Running on CPU: expect about 30 s per sentence. '
+                                'Progress is shown sentence by sentence.</p>')
                 with gr.Column(elem_classes="vc-card"):
                     gr.HTML(ui.step(3, "Result"))
                     out1 = gr.Audio(label="Output", type="filepath", interactive=False)
                     info1 = gr.HTML(ui.EMPTY_RESULT)
-        go.click(clone_and_speak, [*ref1, saved1, text, lang, engine, speed, temperature, rep_pen, fmt1], [out1, info1])
+        gen_event = go.click(clone_and_speak, [*ref1, saved1, text, lang, engine, speed, temperature, rep_pen, fmt1,
+                                               remember1], [out1, info1, saved1])
 
     with gr.Tab("Speech-to-Speech"):
         with gr.Row(equal_height=False):
@@ -249,7 +330,7 @@ with gr.Blocks(title="Voice Clone") as demo:
                         '<p class="vc-hint">Say the line exactly how it should feel. Your timing, pauses and emotion are kept.</p>')
                 source = gr.Audio(label="Your line", sources=["microphone", "upload"], type="filepath")
                 gr.HTML(ui.step(2, "Target voice"))
-                saved2 = gr.Dropdown([""] + saved_names(), value="", label="Saved voice")
+                saved2 = gr.Dropdown([""] + saved_names(), value="", label="Saved voice", info=voice_info())
                 with gr.Accordion("Or upload target clips (consent required)", open=False):
                     ref2 = reference_inputs()
             with gr.Column(elem_classes="vc-card"):
@@ -264,7 +345,9 @@ with gr.Blocks(title="Voice Clone") as demo:
         with gr.Row(equal_height=False):
             with gr.Column(scale=5, elem_classes="vc-card"):
                 gr.HTML(ui.step(1, "Who you're talking to"))
-                saved3 = gr.Dropdown([""] + saved_names(), value="", label="Saved voice")
+                saved3 = gr.Dropdown([""] + saved_names(), value="", label="Saved voice", info=voice_info())
+                with gr.Accordion("Use a new voice (consent required)", open=not saved_names()):
+                    ref3 = reference_inputs()
                 persona = gr.Textbox(label="Personality and shared memories", lines=7,
                                      placeholder="How she talks, pet names, inside jokes, what's going on in her life... "
                                                  "Written by you; the AI improvises from this.")
@@ -282,7 +365,6 @@ with gr.Blocks(title="Voice Clone") as demo:
                 chat_status = gr.HTML(voice_chat.status_html())
                 chat_log = gr.HTML(voice_chat.transcript_html())
         saved3.change(load_persona, [saved3], [persona])
-        start3.click(chat_start, [saved3, persona, lang3, user_name], [chat_status, chat_log])
         stop3.click(chat_stop, None, [chat_status, chat_log])
         gr.Timer(1.0).tick(chat_poll, None, [chat_status, chat_log], concurrency_limit=None, show_progress="hidden")
 
@@ -296,14 +378,21 @@ with gr.Blocks(title="Voice Clone") as demo:
                         'so generation starts instantly next time.</p>')
             with gr.Column(elem_classes="vc-card"):
                 gr.HTML(ui.step("≡", "Library"))
-                existing = gr.Dropdown(saved_names(), label="Saved voices")
+                existing = gr.Dropdown(saved_names(), label="Saved voices",
+                                       info=None if saved_names() else NO_LIBRARY)
+                preview = gr.Audio(label="Reference (cleaned)", type="filepath", interactive=False)
+                details = gr.HTML()
                 del_btn = gr.Button("Delete selected", variant="stop")
                 v_msg = gr.HTML()
-        outs = [v_msg, saved1, saved2, existing]
-        save_btn.click(save_voice, [v_name, v_files, v_mic, v_agreed], outs).then(
-            lambda: gr.update(choices=[""] + saved_names()), None, saved3)
-        del_btn.click(delete_voice, [existing], outs).then(
-            lambda: gr.update(choices=[""] + saved_names(), value=""), None, saved3)
+        existing.change(voice_details, [existing], [preview, details])
+
+    # every action that adds or removes a voice refreshes all pickers, keeping each tab's own selection
+    pickers = [saved1, saved2, saved3, existing]
+    save_btn.click(save_voice, [v_name, v_files, v_mic, v_agreed], [v_msg]).then(refresh_pickers, pickers, pickers)
+    del_btn.click(delete_voice, [existing], [v_msg]).then(refresh_pickers, pickers, pickers)
+    gen_event.then(refresh_pickers, pickers, pickers)
+    start3.click(chat_start, [saved3, persona, lang3, user_name, *ref3], [chat_status, chat_log, saved3]).then(
+        refresh_pickers, pickers, pickers)
 
     with gr.Tab("Watermark Check"):
         with gr.Column(elem_classes="vc-card"):
