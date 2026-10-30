@@ -16,6 +16,7 @@ attrs==26.1.0
 audioread==3.1.0
 audioseal==0.2.0
 brotli==1.2.1
+catalogue==2.0.10
 certifi==2026.10.23
 cffi==2.1.1
 charset-normalizer==3.5.2
@@ -26,6 +27,7 @@ contourpy==1.3.3
 coqpit-config==0.2.5
 coqui-tts==0.28.0
 coqui-tts-trainer==0.4.0
+cutlet==0.5.2
 cycler==0.12.1
 decorator==5.3.1
 docopt==0.6.2
@@ -35,6 +37,7 @@ filelock==4.2.4
 fonttools==4.68.0
 frozenlist==1.8.0
 fsspec==2026.9.0
+fugashi==1.5.2
 gradio==6.31.0
 gradio_client==2.7.2
 groovy==0.1.2
@@ -50,6 +53,7 @@ huggingface_hub==2.4.0
 HyperPyYAML==1.2.3
 idna==3.20
 inflect==7.6.0
+jaconv==0.5.0
 jaraco.functools==4.6.0
 Jinja2==3.1.6
 joblib==1.6.0
@@ -63,6 +67,9 @@ markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 matplotlib==3.11.2
 mdurl==0.1.2
+mecab-ko==1.0.3
+mecab-ko-dic==1.0.0
+mojimoji==0.0.13
 monotonic-alignment-search==0.1.1
 more-itertools==11.2.1
 mpmath==1.3.0
@@ -92,6 +99,7 @@ pydub==0.25.1
 Pygments==2.21.0
 pyloudnorm==0.2.0
 pyparsing==3.3.3
+pypinyin==0.55.0
 pysbd==0.3.4
 python-dateutil==3.0.0
 python-multipart==0.0.32
@@ -112,7 +120,9 @@ shellingham==1.5.4
 six==1.17.0
 soundfile==0.14.0
 soxr==1.1.0
+spacy_pkuseg==1.0.2
 speechbrain==1.1.2
+srsly==2.5.5
 starlette==1.10.0
 sympy==1.14.0
 tensorboard==2.21.0
@@ -128,6 +138,7 @@ typer==0.27.3
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.6
+unidic-lite==1.0.8
 urllib3==2.8.0
 uvicorn==0.54.0
 Werkzeug==3.1.9
