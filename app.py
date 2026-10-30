@@ -176,7 +176,7 @@ def check_watermark(path):
 def reference_inputs(name_label="Speaker name"):
     files = gr.File(label="Reference clips · 1–3 clips, 6–30 s each", file_count="multiple", file_types=["audio"])
     mic = gr.Audio(label="Or record a clip", sources=["microphone"], type="filepath")
-    speaker = gr.Textbox(label=name_label, placeholder="e.g. Sara Khan")
+    speaker = gr.Textbox(label=name_label, placeholder="e.g. Hammad Khan")
     agreed = gr.Checkbox(label="I confirm this speaker gave permission to clone their voice.", elem_classes="vc-consent")
     return files, mic, speaker, agreed
 
