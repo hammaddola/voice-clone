@@ -9,10 +9,20 @@ from . import Engine
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BASE_SPEAKER = "Claribel Dervla"  # built-in XTTS voice, used as the OpenVoice base
+LOCAL_DIR = Path(__file__).resolve().parent.parent / "models" / "xtts_v2"  # optional manual download (see README)
+
+
+def _local_ready():
+    m = LOCAL_DIR / "model.pth"
+    # shortcut: size check guards against a half-finished download; the official checkpoint is ~1.87 GB
+    return m.exists() and m.stat().st_size > 1_800_000_000 and all(
+        (LOCAL_DIR / f).exists() for f in ("config.json", "vocab.json", "speakers_xtts.pth"))
 
 
 @cache
 def load_model(model_dir: str | None = None):
+    if model_dir is None and _local_ready():
+        model_dir = str(LOCAL_DIR)
     if model_dir is None:
         from TTS.api import TTS
         return TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(DEVICE).synthesizer.tts_model

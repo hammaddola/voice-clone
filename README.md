@@ -10,6 +10,7 @@ cloned without a logged **consent** record.
 |---|---|
 | **Clone & Speak** | 1–3 reference clips (upload or record) → text → language / engine / speed → watermarked WAV or MP3 + speaker-similarity score |
 | **Speech-to-Speech** | Record yourself saying a line; it is re-voiced as the target speaker with your timing and emotion intact (OpenVoice v2) |
+| **Live Voice Chat** | Hands-free, Siri-style conversation: you talk, Claude writes a reply, and it is spoken back in a saved voice |
 | **Saved Voices** | Store a processed speaker profile with cached XTTS latents / OpenVoice embeddings, so you don't re-upload |
 | **Watermark Check** | Upload any audio and see whether it carries this app's watermark |
 
@@ -49,6 +50,47 @@ OGG and MP3 work without it.
 If Smart App Control is on, Windows silently blocks freshly released native wheels ("An Application Control
 policy has blocked this file"). `requirements.txt` pins `pandas` and `monotonic-alignment-search` to older,
 established builds for this reason. If you upgrade packages and hit the error, pin the named package back.
+
+### Slow or unreliable internet
+
+If the first-run model download stalls, fetch the files with `curl` (it resumes after drops) into the
+folders the app checks first:
+
+```bash
+cd models/xtts_v2      # config.json, vocab.json, speakers_xtts.pth, model.pth (~1.9 GB)
+curl -L -C - -O https://huggingface.co/coqui/XTTS-v2/resolve/main/model.pth   # repeat for each file
+cd ../whisper-small    # config.json, tokenizer.json, vocabulary.txt, model.bin (~480 MB)
+curl -L -C - -O https://huggingface.co/Systran/faster-whisper-small/resolve/main/model.bin
+```
+
+## Live Voice Chat
+
+A hands-free voice call with a saved voice: speak, pause, and the reply comes back in that voice.
+
+```
+mic → speech detection → Whisper (local) → Claude Opus 5.5 (streamed) → XTTS-v2 (streamed, cloned voice) → speakers
+```
+
+1. Save the voice in **Saved Voices** first (that's where consent is recorded).
+2. Get an API key at <https://console.anthropic.com>, then set it before starting the app:
+   ```bat
+   set ANTHROPIC_API_KEY=sk-ant-...
+   run.bat
+   ```
+3. Open **Live Voice Chat**, pick the voice, and describe their personality, way of talking and shared memories.
+   The AI improvises from this, so the more specific it is, the more natural it sounds.
+4. Press **Start talking**, stay quiet for a second while it measures room noise, then talk. **Use headphones**
+   so it doesn't hear itself.
+
+Things to know:
+- **It's an AI, not the person.** It sounds like them, but Claude writes the words. It won't make plans or
+  promises on their behalf, and it says it's the AI version if you sincerely ask.
+- **Speed:** on a CPU-only laptop expect roughly 3–8 s from the end of your sentence to the first word back,
+  most of it voice generation. An NVIDIA GPU (RTX 3060 or better) brings that to around a second.
+- **Privacy:** speech-to-text and voice generation run locally. Only the text of the conversation goes to
+  Anthropic's API. Claude Opus 5.5 runs at low effort for snappy replies, with server-side refusal fallback on.
+- **Urdu/Hindi:** speak normally; replies are written in Devanagari so the Hindi voice can read them.
+- Turn-taking is one at a time: it doesn't listen while it's talking, so wait for it to finish.
 
 ## Test
 
@@ -100,7 +142,9 @@ Engines share one interface (`engines/__init__.py: Engine`), so adding another m
 ## Project layout
 
 ```
-app.py                 Gradio UI (4 tabs)
+app.py                 Gradio UI (5 tabs)
+ui_theme.py            dark studio theme, CSS and result cards
+voice_chat.py          live voice chat loop (mic → Whisper → Claude → XTTS → speakers)
 consent.py             consent gate + consent_log.csv (timestamp, speaker, SHA-256 of each clip)
 engines/               common interface, sentence split/join, xtts_engine.py, openvoice_engine.py
 audio/preprocess.py    load any format → mono → 24 kHz → denoise → trim → loudness-normalize, with warnings
@@ -129,6 +173,8 @@ tests/smoke_test.py    end-to-end check
 | AudioSeal (code + weights) | MIT | yes |
 | SpeechBrain + ECAPA-VoxCeleb | Apache-2.0 | yes |
 | Gradio | Apache-2.0 | yes |
+| faster-whisper + Whisper small | MIT | yes |
+| Claude API (Live Voice Chat) | [Anthropic commercial terms](https://www.anthropic.com/legal/commercial-terms) | yes, pay-per-use |
 
 `COQUI_TOS_AGREED=1` in `run.bat` / `run.sh` means **you** accept the CPML. Because the OpenVoice engine uses an
 XTTS voice as its base speaker, a fully commercial setup would need a different base TTS (e.g. MeloTTS, MIT).
