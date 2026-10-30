@@ -122,7 +122,7 @@ tests/smoke_test.py    end-to-end check
 
 | Component | Licence | Commercial use? |
 |---|---|---|
-| This app's code | see repo | — |
+| This app's code | [MIT](LICENSE) | yes |
 | [coqui-tts](https://github.com/idiap/coqui-ai-TTS) 0.28 (maintained Coqui fork) | MPL-2.0 | yes |
 | **XTTS-v2 weights** | **[Coqui Public Model License](https://coqui.ai/cpml)** | **No: non-commercial only.** Coqui shut down in 2024, so a commercial licence can no longer be bought. |
 | OpenVoice v2 (code + weights) | MIT | yes |
