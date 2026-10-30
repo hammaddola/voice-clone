@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.log
+
+# personal data: real speakers' names, voices and generated audio never leave this machine
+consent_log.csv
+voices/
+outputs/
+
+# downloaded / trained weights
+models/
+runs/
+data/
+.gradio/

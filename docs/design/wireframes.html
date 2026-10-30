@@ -1,0 +1,194 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice Clone Wireframes</title>
+<style>
+  :root { --ink:#2b2b2b; --mid:#8a8a8a; --line:#bdbdbd; --fill:#ececec; --paper:#fafafa; --note:#d9480f; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--paper); color:var(--ink); font:14px/1.45 "Segoe UI", system-ui, sans-serif; width:1440px; }
+  .screen { display:none; padding:40px 56px 56px; }
+  .screen.on { display:block; }
+  .meta { display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:22px; }
+  .meta h1 { font-size:22px; letter-spacing:.02em; }
+  .meta span { color:var(--mid); font-size:12px; text-transform:uppercase; letter-spacing:.12em; }
+  .frame { border:2px solid var(--ink); border-radius:6px; background:#fff; position:relative; }
+  .topbar { display:flex; align-items:center; gap:14px; padding:14px 22px; border-bottom:1.5px solid var(--line); }
+  .logo { width:28px; height:28px; border:1.5px solid var(--ink); border-radius:50%; position:relative; }
+  .logo::after { content:""; position:absolute; inset:7px; border-left:1.5px solid var(--ink); border-right:1.5px solid var(--ink); }
+  .tabs { display:flex; gap:4px; padding:0 22px; border-bottom:1.5px solid var(--line); }
+  .tab { padding:12px 18px; color:var(--mid); border-bottom:3px solid transparent; }
+  .tab.on { color:var(--ink); font-weight:600; border-color:var(--ink); }
+  .body { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; padding:26px 22px 30px; }
+  .body.one { grid-template-columns:1fr; max-width:760px; }
+  .col > * + * { margin-top:14px; }
+  .lbl { font-size:12px; font-weight:600; color:var(--ink); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em; }
+  .box { border:1.5px solid var(--line); border-radius:4px; background:var(--fill); min-height:40px; display:flex; align-items:center; padding:0 12px; color:var(--mid); }
+  .drop { min-height:120px; border-style:dashed; justify-content:center; flex-direction:column; gap:6px; }
+  .drop b { color:var(--ink); font-weight:600; }
+  .tall { min-height:150px; align-items:flex-start; padding-top:10px; }
+  .row { display:flex; gap:14px; } .row > * { flex:1; }
+  .chk { display:flex; gap:10px; align-items:center; }
+  .chk i { width:18px; height:18px; border:1.5px solid var(--ink); border-radius:3px; flex:none; }
+  .slider { height:40px; display:flex; align-items:center; gap:12px; }
+  .slider .t { flex:1; height:4px; background:var(--line); position:relative; }
+  .slider .t::after { content:""; position:absolute; left:var(--v,40%); top:-7px; width:18px; height:18px; border-radius:50%; background:#fff; border:2px solid var(--ink); }
+  .btn { height:46px; border-radius:4px; background:var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; letter-spacing:.04em; }
+  .btn.ghost { background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
+  .wave { overflow:hidden; justify-content:space-between; height:86px; border:1.5px solid var(--line); border-radius:4px; background:var(--fill); display:flex; align-items:center; gap:3px; padding:0 14px; }
+  .wave i { width:4px; background:var(--mid); border-radius:2px; }
+  .seg { display:flex; border:1.5px solid var(--line); border-radius:4px; overflow:hidden; } .seg div { flex:1; text-align:center; padding:9px; color:var(--mid); } .seg .on { background:var(--ink); color:#fff; }
+  .acc { border:1.5px solid var(--line); border-radius:4px; padding:10px 12px; color:var(--mid); display:flex; justify-content:space-between; }
+  .stat { display:flex; gap:14px; } .stat > div { flex:1; border:1.5px solid var(--line); border-radius:4px; padding:12px; }
+  .stat b { display:block; font-size:22px; } .stat small { color:var(--mid); }
+  .list > div { border:1.5px solid var(--line); border-radius:4px; padding:12px; display:flex; gap:12px; align-items:center; } .list > div + div { margin-top:8px; }
+  .av { width:34px; height:34px; border-radius:50%; background:var(--fill); border:1.5px solid var(--line); flex:none; }
+  .grow { flex:1; } .muted { color:var(--mid); font-size:12px; }
+  .warn { border:1.5px dashed var(--note); color:var(--note); border-radius:4px; padding:10px 12px; font-size:13px; }
+  /* annotations */
+  .n { position:absolute; width:26px; height:26px; border-radius:50%; background:var(--note); color:#fff; font:700 13px/26px sans-serif; text-align:center; box-shadow:0 0 0 3px var(--paper); }
+  .notes { margin-top:26px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px 28px; }
+  .notes div { display:flex; gap:10px; font-size:13px; } .notes b { color:var(--note); flex:none; width:18px; }
+</style>
+</head>
+<body>
+<template id="chrome">
+  <div class="topbar"><div class="logo"></div><b>Voice Clone</b><span class="muted grow">Zero-shot multilingual voice cloning · every output watermarked</span><span class="box" style="min-height:30px">CPU · XTTS-v2</span></div>
+  <div class="tabs"><div class="tab" data-t="clone">Clone &amp; Speak</div><div class="tab" data-t="s2s">Speech-to-Speech</div><div class="tab" data-t="voices">Saved Voices</div><div class="tab" data-t="wm">Watermark Check</div></div>
+</template>
+<template id="wave"><div class="wave"></div></template>
+
+<section class="screen" id="clone">
+  <div class="meta"><h1>01 · Clone &amp; Speak</h1><span>Wireframe · desktop 1440</span></div>
+  <div class="frame">
+    <div class="chrome"></div>
+    <div class="body">
+      <div class="col">
+        <div><div class="lbl">Saved voice (optional)</div><div class="box">Select a saved voice ▾</div></div>
+        <div><div class="lbl">Reference clips · 1–3 · 6–30 s</div><div class="box drop"><b>Drop audio files</b>wav · mp3 · flac · ogg · m4a</div></div>
+        <div class="row"><div class="box">● Record from microphone</div><div class="box">0:00</div></div>
+        <div><div class="lbl">Speaker name</div><div class="box">e.g. Sara Khan</div></div>
+        <div class="chk"><i></i>I confirm this speaker gave permission to clone their voice.</div>
+        <div class="warn">⚠ Clip 1 is only 4.2 s of speech — 6–30 s recommended.</div>
+      </div>
+      <div class="col">
+        <div><div class="lbl">Text</div><div class="box tall">Type what the voice should say. Long text is split into sentences automatically…</div></div>
+        <div class="row"><div><div class="lbl">Language</div><div class="box">English ▾</div></div><div><div class="lbl">Engine</div><div class="box">XTTS-v2 ▾</div></div></div>
+        <div><div class="lbl">Speed · 1.00×</div><div class="slider"><span class="muted">0.5</span><div class="t" style="--v:33%"></div><span class="muted">2.0</span></div></div>
+        <div class="acc"><span>Advanced (XTTS) — temperature 0.70 · repetition penalty 10</span><span>＋</span></div>
+        <div class="row"><div class="seg"><div class="on">WAV</div><div>MP3</div></div><div class="btn">GENERATE</div></div>
+        <div class="wave-slot"></div>
+        <div class="stat"><div><b>82.4%</b><small>Speaker similarity</small></div><div><b>✓</b><small>Watermark embedded</small></div><div><b>⤓</b><small>Download</small></div></div>
+      </div>
+    </div>
+    <i class="n" style="left:-13px;top:150px">1</i><i class="n" style="left:-13px;top:250px">2</i><i class="n" style="left:-13px;top:440px">3</i>
+    <i class="n" style="left:651px;top:150px">4</i><i class="n" style="left:651px;top:420px">5</i><i class="n" style="left:651px;top:620px">6</i>
+  </div>
+  <div class="notes">
+    <div><b>1</b>Saved voice skips upload + consent (already logged when saved).</div>
+    <div><b>2</b>Up to 3 clips; each is denoised, trimmed and loudness-normalized.</div>
+    <div><b>3</b>Consent gate: generation blocked until name + checkbox. SHA-256 of each clip logged.</div>
+    <div><b>4</b>17 XTTS languages + Urdu (approximate, via Hindi) — labelled in the dropdown.</div>
+    <div><b>5</b>Advanced knobs collapsed by default; sensible defaults.</div>
+    <div><b>6</b>Result: player, download, similarity score, quality warnings.</div>
+  </div>
+</section>
+
+<section class="screen" id="s2s">
+  <div class="meta"><h1>02 · Speech-to-Speech</h1><span>Wireframe · desktop 1440</span></div>
+  <div class="frame">
+    <div class="chrome"></div>
+    <div class="body">
+      <div class="col">
+        <div><div class="lbl">Your line</div><div class="box drop"><b>● Record</b>or drop a file — your timing &amp; emotion are kept</div></div>
+        <div class="wave-slot"></div>
+        <div><div class="lbl">Target · saved voice</div><div class="box">Sara Khan ▾</div></div>
+        <div class="muted" style="text-align:center">— or upload target clips (consent required) —</div>
+        <div class="box drop" style="min-height:80px"><b>Drop reference clips</b></div>
+        <div class="row"><div class="box">Speaker name</div></div>
+        <div class="chk"><i></i>I confirm this speaker gave permission to clone their voice.</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Before → After</div>
+        <div class="wave-slot"></div>
+        <div style="text-align:center;font-size:20px">↓ OpenVoice v2 tone-color conversion</div>
+        <div class="wave-slot"></div>
+        <div class="row"><div class="seg"><div class="on">WAV</div><div>MP3</div></div><div class="btn">CONVERT</div></div>
+        <div class="stat"><div><b>79.1%</b><small>Similarity to target</small></div><div><b>✓</b><small>Watermark embedded</small></div></div>
+      </div>
+    </div>
+    <i class="n" style="left:-13px;top:150px">1</i><i class="n" style="left:-13px;top:385px">2</i><i class="n" style="left:651px;top:150px">3</i>
+  </div>
+  <div class="notes">
+    <div><b>1</b>Source is never denoised — natural prosody and emotion are the point.</div>
+    <div><b>2</b>Target comes from Saved Voices or fresh clips behind the same consent gate.</div>
+    <div><b>3</b>Side-by-side waveforms make the conversion legible.</div>
+  </div>
+</section>
+
+<section class="screen" id="voices">
+  <div class="meta"><h1>03 · Saved Voices</h1><span>Wireframe · desktop 1440</span></div>
+  <div class="frame">
+    <div class="chrome"></div>
+    <div class="body">
+      <div class="col">
+        <div class="lbl">New voice profile</div>
+        <div><div class="lbl">Speaker name</div><div class="box">e.g. Sara Khan</div></div>
+        <div class="box drop"><b>Drop 1–3 reference clips</b>or record</div>
+        <div class="chk"><i></i>I confirm this speaker gave permission to clone their voice.</div>
+        <div class="btn">SAVE VOICE</div>
+        <div class="muted">Saving pre-computes XTTS latents + OpenVoice embedding, so generation starts instantly.</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Library · 3 voices</div>
+        <div class="list">
+          <div><span class="av"></span><span class="grow"><b>Sara Khan</b><br><span class="muted">2 clips · 24.1 s · saved 2026-10-30</span></span><span class="box" style="min-height:30px">▶</span><span class="box" style="min-height:30px">🗑</span></div>
+          <div><span class="av"></span><span class="grow"><b>Ali Raza</b><br><span class="muted">1 clip · 14.8 s · saved 2026-10-28</span></span><span class="box" style="min-height:30px">▶</span><span class="box" style="min-height:30px">🗑</span></div>
+          <div><span class="av"></span><span class="grow"><b>Narrator</b><br><span class="muted">3 clips · 29.6 s · saved 2026-10-21</span></span><span class="box" style="min-height:30px">▶</span><span class="box" style="min-height:30px">🗑</span></div>
+        </div>
+        <div class="btn ghost">DELETE SELECTED</div>
+      </div>
+    </div>
+    <i class="n" style="left:-13px;top:150px">1</i><i class="n" style="left:651px;top:150px">2</i>
+  </div>
+  <div class="notes">
+    <div><b>1</b>Same consent gate as cloning; the profile stores clip hashes and is re-checked on use.</div>
+    <div><b>2</b>Profiles appear in the Saved-voice dropdowns of tabs 1 and 2.</div>
+  </div>
+</section>
+
+<section class="screen" id="wm">
+  <div class="meta"><h1>04 · Watermark Check</h1><span>Wireframe · desktop 1440</span></div>
+  <div class="frame">
+    <div class="chrome"></div>
+    <div class="body one" style="margin:0 auto">
+      <div class="col">
+        <div class="box drop" style="min-height:170px"><b>Drop any audio file to check</b>wav · mp3 · flac · ogg</div>
+        <div class="btn">CHECK</div>
+        <div class="stat"><div><b>✓ This app</b><small>Verdict</small></div><div><b>0.99</b><small>Detection probability</small></div><div><b>0 / 16</b><small>ID bit errors</small></div></div>
+        <div class="muted">Three outcomes: contains this app's watermark · watermarked by another AudioSeal user · no watermark.</div>
+      </div>
+    </div>
+    <i class="n" style="left:290px;top:150px">1</i><i class="n" style="left:290px;top:395px">2</i>
+  </div>
+  <div class="notes">
+    <div><b>1</b>Single purpose screen — one input, one action.</div>
+    <div><b>2</b>Verdict first, raw numbers second for auditors.</div>
+  </div>
+</section>
+
+<script>
+  const id = location.hash.slice(1) || "clone";
+  document.getElementById(id).classList.add("on");
+  document.querySelectorAll(".chrome").forEach(c => { c.replaceWith(document.getElementById("chrome").content.cloneNode(true)); });
+  document.querySelectorAll(`#${id} .tab`).forEach(t => t.classList.toggle("on", t.dataset.t === id));
+  let seed = id.length * 7;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  document.querySelectorAll(".wave-slot").forEach(s => {
+    const w = document.createElement("div"); w.className = "wave";
+    for (let i = 0; i < 110; i++) { const b = document.createElement("i"); b.style.height = (8 + rnd() * 56 * Math.sin(i / 110 * Math.PI)) + "px"; w.appendChild(b); }
+    s.replaceWith(w);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice Clone Mockups</title>
+<style>
+  :root {
+    --bg:#0b0d12; --panel:#12151d; --panel2:#171b25; --line:#232838; --line2:#2c3245;
+    --text:#e8eaf0; --sub:#9aa1b4; --dim:#646b80;
+    --a1:#7c5cff; --a2:#22d3ee; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --grad:linear-gradient(135deg,var(--a1),var(--a2));
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--text); font:14px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif; width:1440px;
+         background-image:radial-gradient(900px 500px at 85% -10%,rgba(124,92,255,.18),transparent 60%),radial-gradient(700px 400px at -5% 110%,rgba(34,211,238,.10),transparent 60%); }
+  .screen { display:none; padding:28px 40px 40px; } .screen.on { display:block; }
+  header { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  .mark { width:38px; height:38px; border-radius:11px; background:var(--grad); display:grid; place-items:center; box-shadow:0 8px 24px rgba(124,92,255,.35); }
+  .brand b { font:600 17px "Segoe UI Variable Display","Segoe UI",sans-serif; display:block; letter-spacing:.01em; }
+  .brand span { color:var(--sub); font-size:12.5px; }
+  .grow { flex:1; }
+  .pill { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border:1px solid var(--line2); border-radius:999px; color:var(--sub); font-size:12.5px; background:rgba(255,255,255,.02); }
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px rgba(52,211,153,.15); }
+  nav { display:flex; gap:4px; padding:5px; background:var(--panel); border:1px solid var(--line); border-radius:14px; width:max-content; margin-bottom:22px; }
+  nav div { padding:9px 18px; border-radius:10px; color:var(--sub); font-weight:500; display:flex; gap:8px; align-items:center; }
+  nav div.on { background:var(--panel2); color:var(--text); box-shadow:inset 0 0 0 1px var(--line2), 0 4px 14px rgba(0,0,0,.3); }
+  nav svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; }
+  .grid { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:20px; }
+  .grid.half { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px; }
+  .card + .card { margin-top:20px; } .grid > .card + .card { margin-top:0; } html { background:var(--bg); } body { min-height:100vh; }
+  h3 { font:600 13px "Segoe UI Variable Display","Segoe UI",sans-serif; color:var(--sub); text-transform:uppercase; letter-spacing:.09em; margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+  h3 .step { width:22px; height:22px; border-radius:7px; background:var(--panel2); border:1px solid var(--line2); color:var(--text); display:grid; place-items:center; font-size:11.5px; letter-spacing:0; }
+  label { display:block; font-size:12.5px; color:var(--sub); margin:14px 0 7px; font-weight:500; }
+  .input { background:var(--bg); border:1px solid var(--line2); border-radius:11px; padding:11px 14px; color:var(--text); display:flex; align-items:center; gap:10px; }
+  .input.ph { color:var(--dim); } .input .chev { margin-left:auto; color:var(--dim); }
+  textarea, .ta { min-height:148px; align-items:flex-start; line-height:1.65; }
+  .drop { border:1.5px dashed var(--line2); border-radius:14px; padding:20px; text-align:center; background:rgba(124,92,255,.03); }
+  .drop .ic { width:42px; height:42px; border-radius:12px; margin:0 auto 10px; background:rgba(124,92,255,.14); display:grid; place-items:center; }
+  .drop b { display:block; } .drop span { color:var(--dim); font-size:12.5px; }
+  .clip { display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel2); margin-top:10px; }
+  .clip .play { width:30px; height:30px; border-radius:50%; background:var(--bg); border:1px solid var(--line2); display:grid; place-items:center; flex:none; }
+  .clip .mini { flex:1; height:26px; display:flex; align-items:center; gap:2px; overflow:hidden; }
+  .clip .mini i { flex:1; background:var(--line2); border-radius:2px; min-width:2px; }
+  .clip small { color:var(--sub); font-variant-numeric:tabular-nums; }
+  .tag { font-size:11.5px; padding:3px 8px; border-radius:6px; font-weight:600; }
+  .tag.ok { color:var(--ok); background:rgba(52,211,153,.1); } .tag.warn { color:var(--warn); background:rgba(251,191,36,.1); }
+  .consent { margin-top:16px; padding:14px; border-radius:12px; border:1px solid rgba(52,211,153,.35); background:rgba(52,211,153,.06); display:flex; gap:12px; }
+  .box { width:20px; height:20px; border-radius:6px; background:var(--ok); display:grid; place-items:center; flex:none; margin-top:1px; }
+  .consent small { color:var(--sub); display:block; margin-top:3px; font-size:12px; }
+  .row { display:flex; gap:14px; } .row > * { flex:1; min-width:0; }
+  .flag { width:20px; height:14px; border-radius:3px; background:linear-gradient(#b22234 0 50%,#fff 50%); flex:none; box-shadow:inset 0 0 0 1px rgba(0,0,0,.2); }
+  .slider { padding-top:4px; } .slider .t { height:6px; border-radius:3px; background:var(--line2); position:relative; margin:12px 0 6px; }
+  .slider .t::before { content:""; position:absolute; inset:0 auto 0 0; width:var(--v); border-radius:3px; background:var(--grad); }
+  .slider .t::after { content:""; position:absolute; left:var(--v); top:50%; width:18px; height:18px; border-radius:50%; background:#fff; transform:translate(-50%,-50%); box-shadow:0 0 0 4px rgba(124,92,255,.3); }
+  .slider .lab { display:flex; justify-content:space-between; color:var(--dim); font-size:11.5px; }
+  .lh { display:flex; justify-content:space-between; align-items:baseline; } .lh b { font-variant-numeric:tabular-nums; color:var(--text); font-size:13px; }
+  .seg { display:flex; background:var(--bg); border:1px solid var(--line2); border-radius:11px; padding:3px; }
+  .seg div { flex:1; text-align:center; padding:8px; border-radius:8px; color:var(--sub); font-weight:500; }
+  .seg .on { background:var(--panel2); color:var(--text); box-shadow:inset 0 0 0 1px var(--line2); }
+  .btn { border-radius:12px; padding:13px 20px; font-weight:600; text-align:center; background:var(--grad); color:#fff; box-shadow:0 10px 28px rgba(124,92,255,.35); display:flex; align-items:center; justify-content:center; gap:10px; }
+  .btn.ghost { background:transparent; box-shadow:none; border:1px solid var(--line2); color:var(--text); }
+  .btn.danger { background:transparent; box-shadow:none; border:1px solid rgba(248,113,113,.4); color:var(--bad); }
+  .adv { margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; color:var(--sub); }
+  .adv b { color:var(--text); font-weight:500; }
+  .player { border-radius:16px; padding:18px; background:linear-gradient(180deg,rgba(124,92,255,.10),rgba(34,211,238,.04)); border:1px solid rgba(124,92,255,.3); }
+  .player .top { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .bigplay { width:46px; height:46px; border-radius:50%; background:var(--grad); display:grid; place-items:center; box-shadow:0 8px 20px rgba(124,92,255,.4); flex:none; }
+  .wave { height:72px; display:flex; align-items:center; gap:3px; overflow:hidden; }
+  .wave i { flex:1; min-width:2px; border-radius:2px; background:var(--line2); }
+  .wave i.p { background:var(--grad); }
+  .time { display:flex; justify-content:space-between; color:var(--dim); font-size:11.5px; margin-top:8px; font-variant-numeric:tabular-nums; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+  .stat { border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--panel2); display:flex; gap:12px; align-items:center; }
+  .stat b { font:600 20px "Segoe UI Variable Display","Segoe UI",sans-serif; display:block; } .stat small { color:var(--sub); font-size:12px; }
+  .ring { width:48px; height:48px; flex:none; }
+  .ic2 { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; flex:none; }
+  .note { margin-top:14px; display:flex; gap:10px; padding:11px 14px; border-radius:12px; background:rgba(251,191,36,.07); border:1px solid rgba(251,191,36,.25); color:#f5d58a; font-size:13px; }
+  .sentences { margin-top:12px; display:flex; gap:6px; flex-wrap:wrap; }
+  .sentences span { font-size:12px; padding:4px 10px; border-radius:999px; background:var(--panel2); border:1px solid var(--line); color:var(--sub); }
+  .sentences span.done { color:var(--ok); border-color:rgba(52,211,153,.3); }
+  .vlist .v { display:flex; align-items:center; gap:14px; padding:14px; border-radius:14px; border:1px solid var(--line); background:var(--panel2); }
+  .vlist .v + .v { margin-top:10px; } .vlist .v.sel { border-color:rgba(124,92,255,.55); box-shadow:0 0 0 3px rgba(124,92,255,.12); }
+  .av { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-weight:700; flex:none; }
+  .vlist small { color:var(--sub); font-size:12.5px; }
+  .chips { display:flex; gap:6px; margin-top:6px; } .chips span { font-size:11px; padding:2px 8px; border-radius:6px; background:var(--bg); color:var(--sub); border:1px solid var(--line); }
+  .iconbtn { width:36px; height:36px; border-radius:10px; border:1px solid var(--line2); display:grid; place-items:center; }
+  .verdict { display:flex; gap:18px; align-items:center; padding:22px; border-radius:16px; background:rgba(52,211,153,.07); border:1px solid rgba(52,211,153,.35); }
+  .verdict .big { width:64px; height:64px; border-radius:20px; background:rgba(52,211,153,.16); display:grid; place-items:center; flex:none; }
+  .verdict b { font:600 20px "Segoe UI Variable Display","Segoe UI",sans-serif; } .verdict p { color:var(--sub); margin-top:2px; }
+  .bits { display:grid; grid-template-columns:repeat(16,1fr); gap:5px; margin-top:10px; }
+  .bits i { height:30px; border-radius:6px; background:rgba(52,211,153,.18); border:1px solid rgba(52,211,153,.4); color:var(--ok); font:600 12px/28px Consolas,monospace; text-align:center; font-style:normal; }
+  .arrow { display:flex; align-items:center; gap:12px; color:var(--sub); margin:14px 0; font-size:13px; }
+  .arrow::before, .arrow::after { content:""; flex:1; height:1px; background:var(--line2); }
+  svg.i { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+</head>
+<body>
+
+<template id="head">
+  <header>
+    <div class="mark"><svg class="i" viewBox="0 0 24 24" style="color:#fff"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg></div>
+    <div class="brand"><b>Voice Clone</b><span>Zero-shot multilingual voice cloning</span></div>
+    <div class="grow"></div>
+    <span class="pill"><span class="dot"></span>Models loaded · CPU</span>
+    <span class="pill"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>AudioSeal watermark on</span>
+  </header>
+  <nav>
+    <div data-t="clone"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3"/></svg>Clone &amp; Speak</div>
+    <div data-t="s2s"><svg viewBox="0 0 24 24"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>Speech-to-Speech</div>
+    <div data-t="voices"><svg viewBox="0 0 24 24"><path d="M16 20v-1a4 4 0 0 0-8 0v1M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>Saved Voices</div>
+    <div data-t="wm"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM9 12l2 2 4-4"/></svg>Watermark Check</div>
+  </nav>
+</template>
+
+<!-- 01 -->
+<section class="screen" id="clone">
+  <div class="head"></div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3><span class="step">1</span>Voice</h3>
+        <div class="input ph">Saved voice: none — using uploaded clips<span class="chev">▾</span></div>
+        <label>Reference clips <span style="color:var(--dim)">· 1–3 clips, 6–30 s each</span></label>
+        <div class="drop"><div class="ic"><svg class="i" viewBox="0 0 24 24" style="color:var(--a1)"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></div><b>Drop audio or click to browse</b><span>WAV · MP3 · FLAC · OGG · M4A — or record with your mic</span></div>
+        <div class="clip"><span class="play">▶</span><div><b style="font-size:13px">sara_intro.wav</b><br><small>18.4 s · SNR 31 dB</small></div><div class="mini" data-n="60"></div><span class="tag ok">Clean</span></div>
+        <div class="clip"><span class="play">▶</span><div><b style="font-size:13px">sara_story.m4a</b><br><small>9.7 s · SNR 17 dB</small></div><div class="mini" data-n="60"></div><span class="tag warn">Denoised</span></div>
+        <label>Speaker name</label>
+        <div class="input">Sara Khan</div>
+        <div class="consent"><span class="box"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px;color:#062"><path d="M5 12l5 5 9-10"/></svg></span><div><b style="font-size:13.5px">Sara gave permission to clone her voice</b><small>Logged to consent_log.csv · SHA-256 3f9a…c21e, 8b07…d4f2</small></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3><span class="step">2</span>Script</h3>
+        <div class="input ta">Welcome to Kaelix. Today I'll walk you through our new product in three short minutes. First, let's look at what makes it different — and why our customers love it.</div>
+        <div class="sentences"><span class="done">✓ Welcome to Kaelix.</span><span class="done">✓ Today I'll walk you through…</span><span>◌ First, let's look at…</span><span style="margin-left:auto;border:0;background:none">162 / 5,000</span></div>
+        <div class="row" style="margin-top:4px">
+          <div><label>Language</label><div class="input"><span class="flag"></span>English<span class="chev">▾</span></div></div>
+          <div><label>Engine</label><div class="input"><span class="tag ok" style="background:rgba(124,92,255,.15);color:#b7a6ff">XTTS-v2</span>Best quality<span class="chev">▾</span></div></div>
+        </div>
+        <div class="row" style="margin-top:2px">
+          <div class="slider"><label class="lh">Speed <b>1.00×</b></label><div class="t" style="--v:33%"></div><div class="lab"><span>0.5×</span><span>2.0×</span></div></div>
+          <div><label>Format</label><div class="seg"><div class="on">WAV · 24 kHz</div><div>MP3</div></div></div>
+        </div>
+        <div class="adv"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Advanced <span class="grow"></span>Temperature <b>0.70</b> · Repetition penalty <b>10.0</b><span>▾</span></div>
+        <div class="btn" style="margin-top:16px"><svg class="i" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></svg>Generate speech</div>
+      </div>
+      <div class="card">
+        <h3><span class="step">3</span>Result</h3>
+        <div class="player">
+          <div class="top"><span class="bigplay"><svg class="i" viewBox="0 0 24 24" style="color:#fff;fill:#fff"><path d="M7 4l13 8-13 8z"/></svg></span><div class="grow"><b>Sara Khan · English</b><br><small style="color:var(--sub)">20261030-142211.wav · 11.8 s · 24 kHz mono</small></div><span class="btn ghost" style="padding:9px 14px"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>Download</span></div>
+          <div class="wave" data-n="130" data-p="0.42"></div>
+          <div class="time"><span>0:04.9</span><span>0:11.8</span></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><svg class="ring" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" stroke="#232838" stroke-width="6" fill="none"/><circle cx="24" cy="24" r="20" stroke="url(#g)" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="103.5 125.7" transform="rotate(-90 24 24)"/><defs><linearGradient id="g"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs></svg><div><b>82.4%</b><small>Speaker similarity</small></div></div>
+          <div class="stat"><span class="ic2" style="background:rgba(52,211,153,.12);color:var(--ok)"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM9 12l2 2 4-4"/></svg></span><div><b>Embedded</b><small>AudioSeal watermark</small></div></div>
+          <div class="stat"><span class="ic2" style="background:rgba(34,211,238,.12);color:var(--a2)"><svg class="i" viewBox="0 0 24 24"><path d="M4 12h3l3-8 4 16 3-8h3"/></svg></span><div><b>3 sentences</b><small>Joined with crossfades</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="screen" id="s2s">
+  <div class="head"></div>
+  <div class="grid half">
+    <div class="card">
+      <h3><span class="step">1</span>Your performance</h3>
+      <div class="drop" style="padding:26px"><div class="ic" style="background:rgba(248,113,113,.14)"><span style="width:16px;height:16px;border-radius:50%;background:var(--bad);display:block"></span></div><b>Recording… 0:06.3</b><span>Say the line exactly how it should feel — timing and emotion are kept</span></div>
+      <div class="player" style="margin-top:14px;background:var(--panel2);border-color:var(--line)">
+        <div class="top"><span class="bigplay" style="background:var(--line2);box-shadow:none"><svg class="i" viewBox="0 0 24 24" style="color:#fff;fill:#fff"><path d="M7 4l13 8-13 8z"/></svg></span><div><b>Your voice</b><br><small style="color:var(--sub)">Source · 6.3 s</small></div></div>
+        <div class="wave" data-n="110" data-p="0"></div>
+      </div>
+      <h3 style="margin-top:22px"><span class="step">2</span>Target voice</h3>
+      <div class="vlist">
+        <div class="v sel"><span class="av" style="background:rgba(124,92,255,.18);color:#b7a6ff">SK</span><div class="grow"><b>Sara Khan</b><br><small>Saved voice · 2 clips · consent ✓</small></div><span class="tag ok">Selected</span></div>
+      </div>
+      <div class="arrow">or upload target clips (consent required)</div>
+    </div>
+    <div class="card">
+      <h3><span class="step">3</span>Converted</h3>
+      <div class="arrow" style="margin-top:0"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v16M6 14l6 6 6-6"/></svg>OpenVoice v2 tone-color conversion</div>
+      <div class="player">
+        <div class="top"><span class="bigplay"><svg class="i" viewBox="0 0 24 24" style="color:#fff;fill:#fff"><path d="M7 4l13 8-13 8z"/></svg></span><div class="grow"><b>Sara Khan</b><br><small style="color:var(--sub)">Converted · 6.3 s · same timing as source</small></div><span class="btn ghost" style="padding:9px 14px">Download</span></div>
+        <div class="wave" data-n="110" data-p="0.6"></div>
+        <div class="time"><span>0:03.8</span><span>0:06.3</span></div>
+      </div>
+      <div class="row" style="margin-top:16px"><div class="seg"><div class="on">WAV</div><div>MP3</div></div><div class="btn">Convert voice</div></div>
+      <div class="stats" style="grid-template-columns:1fr 1fr">
+        <div class="stat"><svg class="ring" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" stroke="#232838" stroke-width="6" fill="none"/><circle cx="24" cy="24" r="20" stroke="url(#g2)" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="99.4 125.7" transform="rotate(-90 24 24)"/><defs><linearGradient id="g2"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs></svg><div><b>79.1%</b><small>Similarity to target</small></div></div>
+        <div class="stat"><span class="ic2" style="background:rgba(52,211,153,.12);color:var(--ok)"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM9 12l2 2 4-4"/></svg></span><div><b>Embedded</b><small>AudioSeal watermark</small></div></div>
+      </div>
+      <div class="note" style="background:rgba(124,92,255,.07);border-color:rgba(124,92,255,.25);color:#c9bfff">💡 Your recording is not denoised — breaths, pauses and emphasis carry straight through.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section class="screen" id="voices">
+  <div class="head"></div>
+  <div class="grid">
+    <div class="card">
+      <h3><span class="step">＋</span>New voice profile</h3>
+      <label style="margin-top:0">Speaker name</label>
+      <div class="input">Ali Raza</div>
+      <label>Reference clips</label>
+      <div class="drop"><div class="ic"><svg class="i" viewBox="0 0 24 24" style="color:var(--a1)"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></div><b>Drop 1–3 clips or record</b><span>6–30 s of clean, natural speech</span></div>
+      <div class="clip"><span class="play">▶</span><div><b style="font-size:13px">ali_podcast.wav</b><br><small>14.8 s · SNR 28 dB</small></div><div class="mini" data-n="60"></div><span class="tag ok">Clean</span></div>
+      <div class="consent"><span class="box"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px;color:#062"><path d="M5 12l5 5 9-10"/></svg></span><div><b style="font-size:13.5px">Ali gave permission to clone his voice</b><small>Required before saving</small></div></div>
+      <div class="btn" style="margin-top:16px">Save voice profile</div>
+      <p style="color:var(--dim);font-size:12.5px;margin-top:10px">Saving pre-computes XTTS latents and the OpenVoice embedding, so generation starts instantly next time.</p>
+    </div>
+    <div class="card">
+      <h3 style="justify-content:space-between"><span>Library · 4 voices</span><span class="input ph" style="padding:7px 12px;font-size:12.5px;text-transform:none;letter-spacing:0;font-weight:400;width:240px">🔍 Search voices</span></h3>
+      <div class="vlist">
+        <div class="v sel"><span class="av" style="background:rgba(124,92,255,.18);color:#b7a6ff">SK</span><div class="grow"><b>Sara Khan</b><br><small>2 clips · 28.1 s · saved Oct 30, 2026</small><div class="chips"><span>XTTS latents ✓</span><span>OpenVoice ✓</span><span>consent ✓</span></div></div><span class="iconbtn">▶</span><span class="iconbtn" style="color:var(--bad)">🗑</span></div>
+        <div class="v"><span class="av" style="background:rgba(34,211,238,.15);color:var(--a2)">AR</span><div class="grow"><b>Ali Raza</b><br><small>1 clip · 14.8 s · saved Oct 28, 2026</small><div class="chips"><span>XTTS latents ✓</span><span>OpenVoice ✓</span><span>consent ✓</span></div></div><span class="iconbtn">▶</span><span class="iconbtn" style="color:var(--bad)">🗑</span></div>
+        <div class="v"><span class="av" style="background:rgba(251,191,36,.14);color:var(--warn)">NR</span><div class="grow"><b>Narrator — warm</b><br><small>3 clips · 29.6 s · saved Oct 21, 2026</small><div class="chips"><span>XTTS latents ✓</span><span>OpenVoice ✓</span><span>consent ✓</span></div></div><span class="iconbtn">▶</span><span class="iconbtn" style="color:var(--bad)">🗑</span></div>
+        <div class="v"><span class="av" style="background:rgba(52,211,153,.14);color:var(--ok)">MH</span><div class="grow"><b>Maria Hoffmann</b><br><small>2 clips · 21.0 s · saved Oct 12, 2026</small><div class="chips"><span>XTTS latents ✓</span><span>OpenVoice ✓</span><span>consent ✓</span></div></div><span class="iconbtn">▶</span><span class="iconbtn" style="color:var(--bad)">🗑</span></div>
+      </div>
+      <div class="row" style="margin-top:16px"><div class="btn ghost">Use in Clone &amp; Speak</div><div class="btn danger">Delete selected</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section class="screen" id="wm">
+  <div class="head"></div>
+  <div style="max-width:860px;margin:0 auto">
+    <div class="card">
+      <h3><span class="step">1</span>Audio to check</h3>
+      <div class="drop" style="padding:30px"><div class="ic"><svg class="i" viewBox="0 0 24 24" style="color:var(--a1)"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></div><b>Drop any audio file</b><span>WAV · MP3 · FLAC · OGG — re-encoded or trimmed audio works too</span></div>
+      <div class="clip"><span class="play">▶</span><div><b style="font-size:13px">suspicious_voicemail.mp3</b><br><small>22.4 s · 128 kbps</small></div><div class="mini" data-n="80"></div></div>
+      <div class="btn" style="margin-top:16px">Check for watermark</div>
+    </div>
+    <div class="card">
+      <h3><span class="step">2</span>Result</h3>
+      <div class="verdict"><span class="big"><svg class="i" viewBox="0 0 24 24" style="width:30px;height:30px;color:var(--ok)"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM9 12l2 2 4-4"/></svg></span><div><b>Contains this app's watermark</b><p>This audio was generated by Voice Clone. Detection survives MP3 compression and moderate edits.</p></div></div>
+      <div class="stats">
+        <div class="stat"><div><b>0.99</b><small>Detection probability</small></div></div>
+        <div class="stat"><div><b>0 / 16</b><small>App-ID bit errors</small></div></div>
+        <div class="stat"><div><b>100%</b><small>Frames watermarked</small></div></div>
+      </div>
+      <label style="margin-top:18px">Decoded 16-bit app ID</label>
+      <div class="bits"><i>1</i><i>0</i><i>1</i><i>1</i><i>0</i><i>0</i><i>1</i><i>0</i><i>1</i><i>1</i><i>1</i><i>0</i><i>0</i><i>1</i><i>0</i><i>1</i></div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const id = location.hash.slice(1) || "clone";
+  document.getElementById(id).classList.add("on");
+  document.querySelectorAll(".head").forEach(h => h.replaceWith(document.getElementById("head").content.cloneNode(true)));
+  document.querySelectorAll(`#${id} nav div`).forEach(t => t.classList.toggle("on", t.dataset.t === id));
+  let seed = 11;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  document.querySelectorAll(".wave,.mini").forEach(w => {
+    const n = +w.dataset.n, p = +(w.dataset.p || 0), max = w.classList.contains("wave") ? 70 : 24;
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement("i");
+      const env = Math.sin(i / n * Math.PI) ** .6 * (0.55 + 0.45 * Math.sin(i / 6));
+      b.style.height = Math.max(3, max * (0.15 + 0.85 * rnd()) * env) + "px";
+      if (i / n < p) b.className = "p";
+      w.appendChild(b);
+    }
+  });
+</script>
+</body>
+</html>
