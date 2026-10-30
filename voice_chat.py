@@ -99,7 +99,8 @@ class Chat:
         lang = self.xtts.lang_map.get(self.lang, self.lang)
         with sd.OutputStream(samplerate=OUT_SR, channels=1, dtype="float32") as out:
             while (s := sentences.get()) is not None:
-                self.status = "Speaking"
+                self.status = "Speaking" if DEVICE == "cuda" else "Preparing her reply"
+                chunks = []
                 with torch.inference_mode():
                     for chunk in self.xtts.model.inference_stream(
                             s, lang, self.voice["gpt"].to(DEVICE), self.voice["spk"].to(DEVICE),
@@ -107,7 +108,13 @@ class Chat:
                         if not self.running:
                             return
                         wav = watermark.embed(chunk.cpu().numpy().astype(np.float32), OUT_SR)
-                        out.write(wav[:, None])
+                        if DEVICE == "cuda":
+                            out.write(wav[:, None])  # GPU generates faster than real time: play as it streams
+                        else:
+                            chunks.append(wav)
+                if chunks:  # CPU is ~15x slower than real time; streaming would stutter, so play whole sentences
+                    self.status = "Speaking"
+                    out.write(np.concatenate(chunks)[:, None])
 
     def _reply(self, user_text, sd):
         self.history.append({"role": "user", "content": user_text})

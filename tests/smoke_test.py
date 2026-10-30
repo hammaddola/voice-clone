@@ -4,6 +4,7 @@ Uses a built-in XTTS voice as the "reference speaker", so no real person's voice
 Run:  .venv\\Scripts\\python tests\\smoke_test.py
 """
 import os
+import re
 import sys
 import tempfile
 import time
@@ -57,12 +58,12 @@ for engine, fmt in [("XTTS-v2", "WAV"), ("OpenVoice v2", "MP3")]:
         [str(ref_path)], None, "Ana Florence (built-in test voice)", True, "",
         "The weather is lovely today. Let's go for a walk in the park!", "English", engine,
         1.0, 0.7, 10.0, fmt, progress=no_progress)
-    print(f"   {out} in {time.time() - s:.0f}s")
-    print("   " + report.replace("\n", " "))
+    sim = float(re.search(r"<strong>([\d.]+)%</strong>", report).group(1))
+    print(f"   {out} in {time.time() - s:.0f}s, similarity {sim}%")
     det = watermark.detect(load(out, 16000), 16000)
     print(f"   watermark: {det}")
     assert det["is_this_app"], "watermark not detected"
-    assert float(report.split("similarity:** ")[1].split("%")[0]) > 40, "similarity implausibly low"
+    assert sim > 40, "similarity implausibly low"
 
 print("5) un-watermarked audio is not flagged")
 det = watermark.detect(load(ref_path, 16000), 16000)

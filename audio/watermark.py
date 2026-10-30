@@ -16,12 +16,19 @@ def _models():
     return AudioSeal.load_generator("audioseal_wm_16bits").eval(), AudioSeal.load_detector("audioseal_detector_16bits").eval()
 
 
+def _no_compile():
+    # AudioSeal 0.2 torch.compile()s its encoder, which needs a C++ compiler (MSVC on Windows); eager mode needs none
+    from audioseal.libs.moshi.utils.compile import no_compile
+    return no_compile()
+
+
 @torch.inference_mode()
 def embed(wav: np.ndarray, sr: int) -> np.ndarray:
     """Compute the watermark at 16 kHz, upsample it, and add it to the full-band original."""
     gen, _ = _models()
     x = torch.from_numpy(librosa.resample(wav, orig_sr=sr, target_sr=WM_SR)).float()[None, None]
-    wm = gen.get_watermark(x, message=APP_ID[None]).squeeze().numpy()
+    with _no_compile():
+        wm = gen.get_watermark(x, message=APP_ID[None]).squeeze().numpy()
     wm = librosa.resample(wm, orig_sr=WM_SR, target_sr=sr)
     n = min(len(wm), len(wav))
     out = wav.copy()
@@ -33,7 +40,8 @@ def embed(wav: np.ndarray, sr: int) -> np.ndarray:
 def detect(wav: np.ndarray, sr: int) -> dict:
     _, det = _models()
     x = torch.from_numpy(librosa.resample(wav, orig_sr=sr, target_sr=WM_SR)).float()[None, None]
-    prob, msg = det.detect_watermark(x)
+    with _no_compile():
+        prob, msg = det.detect_watermark(x)
     prob = float(prob[0])
     bit_errors = int((msg[0].int() != APP_ID).sum())
     return {

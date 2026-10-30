@@ -85,8 +85,10 @@ mic → speech detection → Whisper (local) → Claude Opus 5.5 (streamed) → 
 Things to know:
 - **It's an AI, not the person.** It sounds like them, but Claude writes the words. It won't make plans or
   promises on their behalf, and it says it's the AI version if you sincerely ask.
-- **Speed:** on a CPU-only laptop expect roughly 3–8 s from the end of your sentence to the first word back,
-  most of it voice generation. An NVIDIA GPU (RTX 3060 or better) brings that to around a second.
+- **Speed: it needs an NVIDIA GPU to feel like a conversation.** Measured on an i7-1265U laptop (CPU only), XTTS
+  runs ~15x slower than real time: a short sentence takes ~35 s, so each reply arrives after half a minute or
+  more. On CPU it plays whole sentences, so the wait is long but playback is smooth. On an NVIDIA GPU (RTX 3060 or
+  better) XTTS generates faster than real time and reply audio streams while it's being generated.
 - **Privacy:** speech-to-text and voice generation run locally. Only the text of the conversation goes to
   Anthropic's API. Claude Opus 5.5 runs at low effort for snappy replies, with server-side refusal fallback on.
 - **Urdu/Hindi:** speak normally; replies are written in Devanagari so the Hindi voice can read them.
