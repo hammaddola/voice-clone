@@ -17,7 +17,10 @@ from audio import watermark
 from engines.xtts_engine import DEVICE, XTTSEngine
 
 MODEL = "claude-opus-5-5"
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+# Flash-Lite first: Google's fastest model, and live chat is latency-bound. Flash is the fallback when it's overloaded.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+GEMINI_MODELS = list(dict.fromkeys([GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-3.8-flash"]))
+GEMINI_FAILOVER_CODES = (429, 500, 503, 504)  # rate-limited, overloaded or timed out: try the next model
 MIC_SR, OUT_SR = 16000, 24000
 FRAME = 0.03                       # mic block, seconds
 END_SILENCE, MAX_UTTERANCE = 0.8, 30.0
@@ -81,26 +84,40 @@ def stream_claude(client, system, history, user_text):
 
 
 def stream_gemini(client, system, history, user_text):
-    from google.genai import types
+    import httpx
+    from google.genai import errors, types
 
     history.append({"role": "user", "parts": [{"text": user_text}]})
+    config = types.GenerateContentConfig(system_instruction=system,
+                                         thinking_config=types.ThinkingConfig(thinking_level="LOW"))
     reply = ""
-    for chunk in client.models.generate_content_stream(
-        model=GEMINI_MODEL, contents=history,
-        config=types.GenerateContentConfig(system_instruction=system,
-                                           thinking_config=types.ThinkingConfig(thinking_level="LOW")),
-    ):
-        text = chunk.text or ""
-        reply += text
-        yield text
+    for i, model in enumerate(GEMINI_MODELS):
+        try:
+            for chunk in client.models.generate_content_stream(model=model, contents=history, config=config):
+                text = chunk.text or ""
+                reply += text
+                yield text
+            break
+        except (errors.APIError, httpx.TimeoutException) as e:
+            # busy or timed out before any words came back: try the next model; mid-reply or bad requests surface
+            busy = isinstance(e, httpx.TimeoutException) or getattr(e, "code", None) in GEMINI_FAILOVER_CODES
+            if reply or not busy or i == len(GEMINI_MODELS) - 1:
+                raise
     history.append({"role": "model", "parts": [{"text": reply}]})
+
+
+def gemini_client():
+    from google import genai
+    from google.genai import types
+    # live chat: fail over to the next model fast instead of the SDK's long backoff on an overloaded one
+    return genai.Client(http_options=types.HttpOptions(
+        timeout=20_000, retry_options=types.HttpRetryOptions(attempts=1)))  # ms; one try, then our failover
 
 
 PROVIDERS = {  # UI label -> (env vars holding the key, model, client factory, reply writer)
     "Claude": (("ANTHROPIC_API_KEY",), MODEL,
                lambda: __import__("anthropic").Anthropic(), stream_claude),
-    "Gemini": (("GEMINI_API_KEY", "GOOGLE_API_KEY"), GEMINI_MODEL,
-               lambda: __import__("google.genai", fromlist=["Client"]).Client(), stream_gemini),
+    "Gemini": (("GEMINI_API_KEY", "GOOGLE_API_KEY"), GEMINI_MODEL, lambda: gemini_client(), stream_gemini),
 }
 
 
@@ -162,14 +179,15 @@ class Chat:
                             stream_chunk_size=20, temperature=0.7, enable_text_splitting=False):
                         if not self.running:
                             return
-                        wav = watermark.embed(chunk.cpu().numpy().astype(np.float32), OUT_SR)
-                        if DEVICE == "cuda":
-                            out.write(wav[:, None])  # GPU generates faster than real time: play as it streams
+                        wav = chunk.cpu().numpy().astype(np.float32)
+                        if DEVICE == "cuda":  # GPU generates faster than real time: play as it streams
+                            # shortcut: per-chunk marks are weaker than one per sentence; buffer ~2 s if GPU detection is low
+                            out.write(watermark.embed(wav, OUT_SR)[:, None])
                         else:
                             chunks.append(wav)
                 if chunks:  # CPU is ~15x slower than real time; streaming would stutter, so play whole sentences
                     self.status = "Speaking"
-                    out.write(np.concatenate(chunks)[:, None])
+                    out.write(watermark.embed(np.concatenate(chunks), OUT_SR)[:, None])  # one mark per sentence
 
     def _reply(self, user_text, sd):
         sentences = queue.Queue()
@@ -303,6 +321,29 @@ if __name__ == "__main__":
     assert str(seen["level"]).upper().endswith("LOW"), seen
     assert hist == [{"role": "user", "parts": [{"text": "hello"}]},
                     {"role": "model", "parts": [{"text": "Hi there. Missed you!"}]}]
+
+    # overloaded first model (503) falls back to the next one; a 400 is not retried
+    from google.genai import errors
+    tried = []
+
+    def busy_then_ok(model, contents, config):
+        tried.append(model)
+        if len(tried) == 1:
+            raise errors.ServerError(503, {"error": {"code": 503, "message": "high demand", "status": "UNAVAILABLE"}})
+        return iter([NS(text="Still here.")])
+
+    hist = []
+    assert list(stream_gemini(NS(models=NS(generate_content_stream=busy_then_ok)), "S", hist, "hi")) == ["Still here."]
+    assert tried == GEMINI_MODELS[:2] and len(hist) == 2, tried
+
+    def bad_request(model, contents, config):
+        raise errors.ClientError(400, {"error": {"code": 400, "message": "bad", "status": "INVALID_ARGUMENT"}})
+
+    try:
+        list(stream_gemini(NS(models=NS(generate_content_stream=bad_request)), "S", [], "hi"))
+        raise AssertionError("400 should not fall back")
+    except errors.ClientError:
+        pass
 
     # Claude writer against a fake client
     @contextmanager

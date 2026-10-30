@@ -79,7 +79,7 @@ mic → speech detection → Whisper (local) → Claude or Gemini (streamed) →
    ```bat
    rem Claude (Claude Opus 5.5) - key from https://console.anthropic.com
    set ANTHROPIC_API_KEY=sk-ant-...
-   rem or Gemini (gemini-3.8-flash; override with GEMINI_MODEL) - key from https://aistudio.google.com
+   rem or Gemini - key from https://aistudio.google.com (use setx instead of set to keep it across restarts)
    set GEMINI_API_KEY=...
    run.bat
    ```
@@ -97,7 +97,8 @@ Things to know:
   better) XTTS generates faster than real time and reply audio streams while it's being generated.
 - **Privacy:** speech-to-text and voice generation run locally; only the text of the conversation goes to the
   AI provider you pick. Claude Opus 5.5 runs at low effort for snappy replies, with server-side refusal fallback
-  on. Gemini runs with low thinking. On Gemini's **free tier, Google may use your conversation text to improve
+  on. Gemini uses `gemini-3.5-flash-lite` (fastest; ~1 s replies in testing) with low thinking, and switches to
+  `gemini-3.8-flash` automatically if it's overloaded; set `GEMINI_MODEL` to choose another. On Gemini's **free tier, Google may use your conversation text to improve
   its products**; use a paid Gemini key or Claude for conversations you want kept private.
 - **Urdu/Hindi:** speak normally; replies are written in Devanagari so the Hindi voice can read them.
 - Turn-taking is one at a time: it doesn't listen while it's talking, so wait for it to finish.
